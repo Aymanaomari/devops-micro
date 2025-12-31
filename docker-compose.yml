@@ -1,0 +1,215 @@
+services:
+
+  order-service:
+    build:
+      context: ./order.service
+      dockerfile: Dockerfile
+    container_name: order-service
+    restart: always
+    ports:
+      - "8081:8081"
+    environment:
+      DB_HOST: order-mysql
+      DB_PORT: 3306
+      DB_USERNAME: root
+      DB_PASSWORD: root
+      KAFKA_BOOTSTRAP_SERVERS: broker:29092
+      KAFKA_DEFAULT_TOPIC: order-placed
+      INVENTORY_HOST: inventory-service
+      INVENTORY_PORT: 8082
+    depends_on:
+      - order-mysql
+      - broker
+    networks:
+      - shared-network
+
+  order-mysql:
+    image: mysql:8.3.0
+    container_name: order-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: order-service
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./order.service/mysql:/var/lib/mysql
+    networks:
+      - shared-network
+
+  order-phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: order-service-myphpadmin
+    restart: always
+    ports:
+      - "8001:80"
+    environment:
+      PMA_HOST: order-mysql
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: root
+    depends_on:
+      - order-mysql
+    networks:
+      - shared-network
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    hostname: zookeeper
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - shared-network
+
+  broker:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: broker
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - shared-network
+
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.5.0
+    hostname: schema-registry
+    container_name: schema-registry
+    depends_on:
+      - broker
+    ports:
+      - "8085:8081"
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'broker:29092'
+      SCHEMA_REGISTRY_LISTENERS: http://schema-registry:8081
+    networks:
+      - shared-network
+
+  kafka-ui:
+    container_name: kafka-ui
+    image: provectuslabs/kafka-ui:latest
+    ports:
+      - "8086:8080"
+    depends_on:
+      - broker
+      - schema-registry
+    environment:
+      KAFKA_CLUSTERS_NAME: local
+      KAFKA_CLUSTERS_BOOTSTRAPSERVERS: broker:29092
+      KAFKA_CLUSTERS_SCHEMAREGISTRY: http://schema-registry:8081
+      DYNAMIC_CONFIG_ENABLED: 'true'
+    networks:
+      - shared-network
+  
+
+  product-service:
+    build:
+      context: ./product.service
+      dockerfile: Dockerfile
+    container_name: product_service
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_USERNAME=admin
+      - DB_ROOT_PASSWORD=admin
+      - MONGODB_HOST=product-mongo
+      - MONGODB_PORT=27017
+      - INVENTORY_HOST=inventory-service
+      - INVENTORY_PORT=8082
+      - SERVER_PORT=8080
+    depends_on:
+      product-mongo:
+        condition: service_healthy
+    networks:
+      - shared-network
+
+  product-mongo:
+    image: mongo:7.0.5
+    container_name: mongo_db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin
+      MONGO_INITDB_DATABASE: product-service
+    ports:
+      - "27017:27017"
+    volumes:
+      - ./data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+     - shared-network
+  
+
+  inventory-service:
+    build:
+      context: ./inventory.service
+      dockerfile: Dockerfile
+    container_name: inventory-service
+    restart: always
+    ports:
+      - "8082:8082"
+    environment:
+      DB_HOST: inventory-mysql
+      DB_PORT: 3306
+      DB_NAME: inventory-service
+      DB_USER: root
+      DB_PASSWORD: root
+    networks:
+      - shared-network
+    depends_on:
+      - inventory-mysql
+
+  inventory-mysql:
+    image: mysql:8.3.0
+    container_name: inventory-service-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: inventory-service
+    ports:
+      - "3307:3306"
+    volumes:
+      - ./mysql:/var/lib/mysql
+    networks:
+      - shared-network
+
+  inventory-phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: phpmyadmin
+    restart: always
+    ports:
+      - "8000:80"
+    environment:
+      PMA_HOST: inventory-mysql
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: root
+    depends_on:
+      - inventory-mysql
+    networks:
+      - shared-network	  
+  
+
+  
+
+
+
+networks:
+  shared-network:
+    driver: bridge
