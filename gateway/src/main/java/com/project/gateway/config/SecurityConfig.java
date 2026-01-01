@@ -14,7 +14,8 @@ public class SecurityConfig {
         public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
                 httpSecurity.cors(cors -> cors.configurationSource(request -> {
                         org.springframework.web.cors.CorsConfiguration config = new org.springframework.web.cors.CorsConfiguration();
-                        config.setAllowedOriginPatterns(java.util.List.of("http://localhost:4200"));
+                        config.setAllowedOriginPatterns(
+                                        java.util.List.of("http://localhost:4200", "http://localhost:8080"));
                         config.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
                         config.setAllowedHeaders(java.util.List.of("*"));
                         config.setAllowCredentials(true);

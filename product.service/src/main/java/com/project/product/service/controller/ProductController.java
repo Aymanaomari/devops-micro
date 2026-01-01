@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -89,4 +90,19 @@ public class ProductController {
     public void deleteProduct(@PathVariable String id) {
         productService.deleteProduct(id);
     }
+
+    /**
+     * Retrieves the price of a product by its ID.
+     *
+     * @param id Product ID
+     * @return Map containing the product ID and its price
+     */
+    @Operation(summary = "Get product price by ID", description = "Returns the price of a product by its unique identifier.")
+    @GetMapping("/{id}/price")
+    @ResponseStatus(HttpStatus.OK)
+    public BigDecimal getProductPriceById(@PathVariable String id) {
+        return productService.getProductPriceById(id);
+
+    }
+
 }

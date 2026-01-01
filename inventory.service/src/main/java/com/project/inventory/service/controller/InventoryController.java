@@ -18,30 +18,33 @@ public class InventoryController {
     final private InventoryService inventoryService;
 
     /**
-     * Checks if a specific SKU is in stock with the required quantity.
+     * Checks if a specific product is available in the inventory with the required
+     * quantity.
      *
-     * @param skuCode  the SKU code of the product
-     * @param quantity the quantity to check for availability
-     * @return true if the product is in stock with the required quantity, false
+     * @param productId the unique identifier of the product to check
+     * @param quantity  the quantity to verify for availability
+     * @return true if the product is available in the specified quantity, false
      *         otherwise
      */
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
-    public boolean isInStock(@RequestParam String skuCode, @RequestParam Integer quantity) {
-        return inventoryService.isInStock(skuCode, quantity);
+    public boolean isInStock(@RequestParam String productId, @RequestParam Integer quantity) {
+        return inventoryService.isInStock(productId, quantity);
     }
 
     /**
-     * Add A product to inventory
-     * 
-     * @param skuCode  the SKU code of the product
-     * @param quantity the quantity to add to inventory
+     * Adds a new product to the inventory with the specified details.
+     *
+     * @param productId   the unique identifier of the product
+     * @param productName the name of the product
+     * @param quantity    the quantity to add to the inventory
+     * @return true if the product was successfully added, false otherwise
      */
     @Operation(summary = "Add a product to inventory", description = "Adds a new product to the inventory with specified details.")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public boolean addProductToInventory(@RequestParam String skuCode, @RequestParam Integer quantity) {
-        return inventoryService.addProductToInventory(skuCode, quantity);
-
+    public boolean addProductToInventory(@RequestParam String productId, @RequestParam String productName,
+            @RequestParam Integer quantity) {
+        return inventoryService.addProductToInventory(productId, productName, quantity);
     }
 }

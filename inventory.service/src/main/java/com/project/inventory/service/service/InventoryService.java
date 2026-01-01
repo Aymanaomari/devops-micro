@@ -15,16 +15,16 @@ public class InventoryService {
     final private InventoryRepository inventoryRepository;
 
     /**
-     * Checks if a product with the given SKU code is in stock with the required
+     * Checks if a product with the given productId is in stock with the required
      * quantity.
      *
-     * @param skyCode  the SKU code of the product
-     * @param quantity the quantity to check for availability
+     * @param productId the product ID of the product
+     * @param quantity  the quantity to check for availability
      * @return true if the product is in stock with the required quantity, false
      *         otherwise
      */
-    public boolean isInStock(String skyCode, Integer quantity) {
-        return inventoryRepository.existsBySkuCodeAndQuantityIsGreaterThanEqual(skyCode, quantity);
+    public boolean isInStock(String productId, Integer quantity) {
+        return inventoryRepository.existsByProductIdAndQuantityGreaterThanEqual(productId, quantity);
     }
 
     /**
@@ -33,11 +33,12 @@ public class InventoryService {
      * @param skuCode  the SKU code of the product
      * @param quantity the quantity to add to the inventory
      */
-    public boolean addProductToInventory(String skuCode, Integer quantity) {
-        var inventory = inventoryRepository.findBySkuCode(skuCode)
+    public boolean addProductToInventory(String productId, String productName, Integer quantity) {
+        var inventory = inventoryRepository.findByProductId(productId)
                 .orElseGet(() -> {
                     var newInventory = new Inventory();
-                    newInventory.setSkuCode(skuCode);
+                    newInventory.setProductId(productId);
+                    newInventory.setProductName(productName);
                     newInventory.setQuantity(0);
                     return newInventory;
                 });

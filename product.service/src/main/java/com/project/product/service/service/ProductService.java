@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -36,7 +37,7 @@ public class ProductService {
     productRepository.save(product);
     log.info("Product created successfully with id: {}", product.getId());
 
-    inventoryClient.addToInventory(product.getId(), productRequest.quantity());
+    inventoryClient.addToInventory(product.getId(), product.getName(), productRequest.quantity());
 
     return new ProductResponse(
         product.getId(),
@@ -87,5 +88,18 @@ public class ProductService {
     }
     productRepository.deleteById(id);
     log.info("Product deleted successfully with id: {}", id);
+  }
+
+  /**
+   * Retrieves the price of a product by its unique identifier.
+   *
+   * @param id the unique identifier of the product
+   * @return the price of the specified product
+   * @throws ProductNotFoundException if the product is not found
+   */
+  public BigDecimal getProductPriceById(String id) {
+    Product product = productRepository.findById(id)
+        .orElseThrow(() -> new ProductNotFoundException("Product not found with id: " + id));
+    return product.getPrice();
   }
 }

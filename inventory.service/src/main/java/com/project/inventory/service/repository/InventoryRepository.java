@@ -14,20 +14,20 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface InventoryRepository extends JpaRepository<Inventory, Long> {
 
     /**
-     * Checks if an inventory item exists with the given SKU code and has quantity
+     * Checks if an inventory item exists with the given product ID and has quantity
      * greater than or equal to the specified amount.
      *
-     * @param SkuCode  the SKU code of the product
-     * @param quantity the minimum quantity required
+     * @param productId the product ID of the item
+     * @param quantity  the minimum quantity required
      * @return true if the item exists with sufficient quantity, false otherwise
      */
-    boolean existsBySkuCodeAndQuantityIsGreaterThanEqual(String SkuCode, Integer quantity);
+    boolean existsByProductIdAndQuantityGreaterThanEqual(String productId, Integer quantity);
 
     /**
-     * Finds an inventory item by its SKU code.
+     * Finds an inventory item by its product ID.
      *
-     * @param skuCode the SKU code of the product
+     * @param productId the product ID of the item
      * @return an Optional containing the inventory item if found, empty otherwise
      */
-    Optional<Inventory> findBySkuCode(String skuCode);
+    Optional<Inventory> findByProductId(String productId);
 }

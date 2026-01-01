@@ -14,10 +14,11 @@ public interface InventoryClient {
     @GetExchange("/api/inventory")
     @CircuitBreaker(name = "inventoryService", fallbackMethod = "isInStockFallback")
     @Retry(name = "inventoryService")
-    boolean isInStock(@RequestParam String skuCode, @RequestParam Integer quantity);
+    boolean isInStock(@RequestParam("productId") String productId,
+            @RequestParam("quantity") Integer quantity);
 
-    default boolean isInStockFallback(String skuCode, Integer quantity, Throwable throwable) {
-        log.info("Cannot get inventory for skuCode {}, failure reason: {}", skuCode, throwable.getMessage());
+    default boolean isInStockFallback(String ProductId, Integer quantity, Throwable throwable) {
+        log.info("Cannot get inventory for ProductId {}, failure reason: {}", ProductId, throwable.getMessage());
         return false;
     }
 }

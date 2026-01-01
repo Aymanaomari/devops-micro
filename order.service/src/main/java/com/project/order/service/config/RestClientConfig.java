@@ -8,6 +8,7 @@ import org.springframework.web.client.support.RestClientAdapter;
 import org.springframework.web.service.invoker.HttpServiceProxyFactory;
 
 import com.project.order.service.client.InventoryClient;
+import com.project.order.service.client.ProductClient;
 
 @Configuration
 public class RestClientConfig {
@@ -23,5 +24,18 @@ public class RestClientConfig {
         var restClientAdapter = RestClientAdapter.create(restClient);
         var httpServiceProxyFactory = HttpServiceProxyFactory.builderFor(restClientAdapter).build();
         return httpServiceProxyFactory.createClient(InventoryClient.class);
+    }
+
+    @Value("${product.url}")
+    private String productServiceUrl; // Replace with actual product service URL
+
+    @Bean
+    public ProductClient productClient() {
+        RestClient restClient = RestClient.builder()
+                .baseUrl(productServiceUrl) // Replace with actual product service URL
+                .build();
+        var restClientAdapter = RestClientAdapter.create(restClient);
+        var httpServiceProxyFactory = HttpServiceProxyFactory.builderFor(restClientAdapter).build();
+        return httpServiceProxyFactory.createClient(ProductClient.class);
     }
 }
