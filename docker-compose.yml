@@ -6,8 +6,6 @@ services:
       dockerfile: Dockerfile
     container_name: order-service
     restart: always
-    ports:
-      - "8081:8081"
     environment:
       DB_HOST: order-mysql
       DB_PORT: 3306
@@ -17,21 +15,25 @@ services:
       KAFKA_DEFAULT_TOPIC: order-placed
       INVENTORY_HOST: inventory-service
       INVENTORY_PORT: 8082
+      PRODUCT_HOST: product-service
+      PRODUCT_PORT: 8080
     depends_on:
       - order-mysql
       - broker
     networks:
       - shared-network
+    ports:
+      - "8081:8081"
 
   order-mysql:
     image: mysql:8.3.0
     container_name: order-mysql
     restart: always
+    ports:
+      - "3307:3306"
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: order-service
-    ports:
-      - "3306:3306"
     volumes:
       - ./order.service/mysql:/var/lib/mysql
     networks:
@@ -129,9 +131,10 @@ services:
       - INVENTORY_HOST=inventory-service
       - INVENTORY_PORT=8082
       - SERVER_PORT=8080
+      - LOKI_HOST=loki
+      - LOKI_PORT=3100
     depends_on:
-      product-mongo:
-        condition: service_healthy
+      - product-mongo
     networks:
       - shared-network
 
@@ -155,6 +158,56 @@ services:
     networks:
      - shared-network
   
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - shared-network
+
+  ## Tempo Service
+  tempo:
+    image: grafana/tempo
+    container_name: tempo
+    command: [ "-config.file=/etc/tempo.yaml" ]
+    volumes:
+      - ./docker/tempo/tempo.yml:/etc/tempo.yaml:ro
+      - ./docker/tempo/tempo-data:/tmp/tempo
+    ports:
+      - "3200:3200" # Tempo
+      - "9411:9411" # zipkin
+    networks:
+        - shared-network
+
+  #loki Service
+  loki:
+    image: grafana/loki:main
+    container_name: loki
+    command: [ "-config.file=/etc/loki/local-config.yaml" ]
+    ports:
+      - "3100:3100"
+    networks:
+        - shared-network
+
+  # Grafana Service
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./docker/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./docker/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=password
+    networks:
+      - shared-network
 
   inventory-service:
     build:
@@ -162,8 +215,7 @@ services:
       dockerfile: Dockerfile
     container_name: inventory-service
     restart: always
-    ports:
-      - "8082:8082"
+
     environment:
       DB_HOST: inventory-mysql
       DB_PORT: 3306
@@ -183,7 +235,7 @@ services:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: inventory-service
     ports:
-      - "3307:3306"
+      - "3308:3306"
     volumes:
       - ./mysql:/var/lib/mysql
     networks:
@@ -206,9 +258,88 @@ services:
       - shared-network	  
   
 
-  
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    container_name: gateway
+    restart: always
+    environment:
+      - GATEWAY_PORT=9000
+      - PRODUCT_SERVICE_HOST=product-service
+      - PRODUCT_SERVICE_PORT=8080
+      - ORDER_SERVICE_HOST=order-service
+      - ORDER_SERVICE_PORT=8081
+      - INVENTORY_SERVICE_HOST=inventory-service
+      - INVENTORY_SERVICE_PORT=8082
+      - KEYCLOAK_ISSUER_URI=http://keycloak:8080/realms/devops-micro
+      - KEYCLOAK_JWK_SET_URI=http://keycloak:8080/realms/devops-micro/protocol/openid-connect/certs
+    ports:
+      - "9000:9000"
+    depends_on:
+      - keycloak
+      - product-service
+      - order-service
+      - inventory-service
+    networks:
+      - shared-network
+
+  keycloak-db:
+    image: mariadb:10.11
+    container_name: keycloak-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: keycloak
+      MYSQL_USER: keycloak
+      MYSQL_PASSWORD: password
+    volumes:
+      - keycloak_db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - shared-network
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.1
+    container_name: keycloak
+    command: ["start-dev", "--import-realm"]
+    restart: always
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+    environment:
+      KC_DB: mariadb
+      KC_DB_URL: jdbc:mariadb://keycloak-db:3306/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: password
+
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    ports:
+      - "8181:8080"
+    volumes:
+      - ./docker/keycloak/realms:/opt/keycloak/data/import
+    networks:
+      - shared-network
 
 
+
+  frontend:
+    build:
+      context: ./microservices-shop-frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    ports:
+      - "4200:80"
+    networks:
+      - shared-network
+
+volumes:
+  keycloak_db_data:
 
 networks:
   shared-network:

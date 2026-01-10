@@ -52,6 +52,8 @@ public class ProductService {
    * @return a list of product responses
    */
   public List<ProductResponse> getAllProducts() {
+
+    log.info("fetching all products");
     List<ProductResponse> products = productRepository.findAll().stream()
         .map((product) -> new ProductResponse(product.getId(), product.getName(), product.getDescription(),
             product.getPrice()))

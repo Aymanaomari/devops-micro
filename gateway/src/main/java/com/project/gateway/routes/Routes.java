@@ -17,8 +17,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.servlet.function.RouterFunction;
 import org.springframework.web.servlet.function.ServerResponse;
 
-import org.slf4j.Logger;
-
 @Configuration
 public class Routes {
 
@@ -30,8 +28,6 @@ public class Routes {
 
         @Value("${inventory.service.url}")
         private String inventoryServiceUrl;
-
-        private static final Logger logger = org.slf4j.LoggerFactory.getLogger(Routes.class);
 
         @Bean
         public RouterFunction<ServerResponse> productServiceRoute() {
