@@ -1,0 +1,49 @@
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: product-service
+  labels:
+    app: product-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: product-service
+  template:
+    metadata:
+      labels:
+        app: product-service
+    spec:
+      containers:
+        - name: product-service
+          image: aymanaomarihub/product-service:v1.0.0
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SERVER_PORT
+              value: "8080" 
+            - name: MONGODB_HOST
+              value: product-mongo-service
+            - name: MONGODB_PORT
+              value: "27017"
+            - name: DB_NAME
+              value: product-service
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: product-service-secret
+                  key: DB_USERNAME
+            - name: DB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: product-service-secret
+                  key: DB_PASSWORD
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "500m"
+            limits:
+              memory: "512Mi"
+              cpu: "1"
+          

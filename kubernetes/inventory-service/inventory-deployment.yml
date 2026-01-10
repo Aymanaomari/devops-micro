@@ -1,0 +1,50 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: inventory-deployment
+  labels:
+    app: inventory-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: inventory-app
+  template:
+    metadata:
+      labels:
+        app: inventory-app
+    spec:
+      containers:
+        - name: inventory-container
+          image: aymanaomarihub/inventory-service:v1.0.0
+          ports:
+            - containerPort: 8081
+          env:
+            - name: SERVER_PORT
+              value: "8081"
+            - name: DB_HOST
+              value: mysql-inventory-service
+            - name: DB_PORT
+              value: "3306"
+            - name: DB_NAME
+              value: inventory-service
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: inventory-service-secret
+                  key: DB_USERNAME
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: inventory-service-secret
+                  key: DB_PASSWORD
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "500m"
+            limits:
+              memory: "512Mi"
+              cpu: "1"
+            
+
+            
