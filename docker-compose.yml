@@ -17,6 +17,8 @@ services:
       INVENTORY_PORT: 8082
       PRODUCT_HOST: product-service
       PRODUCT_PORT: 8080
+      LOKI_HOST: loki
+      LOKI_PORT: 3100
     depends_on:
       - order-mysql
       - broker
@@ -222,6 +224,8 @@ services:
       DB_NAME: inventory-service
       DB_USER: root
       DB_PASSWORD: root
+      LOKI_HOST: loki
+      LOKI_PORT: 3100
     networks:
       - shared-network
     depends_on:
@@ -274,6 +278,8 @@ services:
       - INVENTORY_SERVICE_PORT=8082
       - KEYCLOAK_ISSUER_URI=http://keycloak:8080/realms/devops-micro
       - KEYCLOAK_JWK_SET_URI=http://keycloak:8080/realms/devops-micro/protocol/openid-connect/certs
+      - LOKI_HOST=loki
+      - LOKI_PORT=3100
     ports:
       - "9000:9000"
     depends_on:
