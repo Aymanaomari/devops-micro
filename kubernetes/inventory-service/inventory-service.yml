@@ -1,0 +1,15 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: inventory-service-service
+  labels:
+    app: inventory-service
+spec:
+  selector:
+    app: inventory-app
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8081
+      targetPort: 8081
+  type: NodePort

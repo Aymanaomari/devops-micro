@@ -1,0 +1,37 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: inventory-mysql
+  labels:
+    app: inventory-mysql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: inventory-mysql
+  template:
+    metadata:
+      labels:
+        app: inventory-mysql
+    spec:
+      containers:
+        - name: inventory-mysql
+          image: mysql:8.3.0
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: inventory-service-secret
+                  key: DB_PASSWORD
+            - name: MYSQL_DATABASE
+              value: "inventory-service"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+            

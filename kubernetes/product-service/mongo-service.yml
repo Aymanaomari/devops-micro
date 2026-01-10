@@ -1,0 +1,14 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: product-mongo-service
+  labels:
+    app: product-mongo
+spec:
+  selector:
+    app: product-mongo
+  ports:
+    - protocol: TCP
+      port: 27017
+      targetPort: 27017
+  type: ClusterIP
