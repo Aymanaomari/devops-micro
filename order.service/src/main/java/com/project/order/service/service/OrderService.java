@@ -3,14 +3,10 @@ package com.project.order.service.service;
 import com.project.order.service.client.InventoryClient;
 import com.project.order.service.client.ProductClient;
 import com.project.order.service.dto.OrderRequest;
-import com.project.order.service.event.OrderPlacedEvent;
 import com.project.order.service.model.Order;
 import com.project.order.service.repository.OrderRepository;
-
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.http.HttpStatus;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -24,7 +20,6 @@ public class OrderService {
     final private OrderRepository orderRepository;
     final private InventoryClient inventoryClient;
     final private ProductClient productClient;
-    final private KafkaTemplate<String, OrderPlacedEvent> kafkaTemplate;
     final private Logger log = Logger.getLogger("logger");
 
     public void placeOrder(OrderRequest orderRequest) {
@@ -56,16 +51,6 @@ public class OrderService {
         order.setPrice(totalPrice);
 
         orderRepository.save(order);
-
-        // Send the message to kafka topic
-        OrderPlacedEvent orderPlacedEvent = new OrderPlacedEvent(order.getId(),
-                order.getProductName(),
-                orderRequest.userDetails().firstName(),
-                orderRequest.userDetails().lastName(),
-                orderRequest.userDetails().email());
-
-        log.info("OrderPlacedEvent sent to Kafka Topic: " + orderPlacedEvent);
-        kafkaTemplate.send("order-placed", orderPlacedEvent);
 
     }
 

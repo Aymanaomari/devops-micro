@@ -1,0 +1,213 @@
+services:
+
+  order-service:
+    build:
+      context: ./order.service
+      dockerfile: Dockerfile
+    container_name: order-service
+    restart: always
+    environment:
+      DB_HOST: order-mysql
+      DB_PORT: 3306
+      DB_USERNAME: root
+      DB_PASSWORD: root
+      KAFKA_BOOTSTRAP_SERVERS: broker:29092
+      KAFKA_DEFAULT_TOPIC: order-placed
+      INVENTORY_HOST: inventory-service
+      INVENTORY_PORT: 8082
+      PRODUCT_HOST: product-service
+      PRODUCT_PORT: 8080
+      LOKI_HOST: loki
+      LOKI_PORT: 3100
+    depends_on:
+      - order-mysql
+      - broker
+    networks:
+      - shared-network
+    ports:
+      - "8081:8081"
+
+  order-mysql:
+    image: mysql:8.3.0
+    container_name: order-mysql
+    restart: always
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: order-service
+    volumes:
+      - ./order.service/mysql:/var/lib/mysql
+    networks:
+      - shared-network
+
+  order-phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: order-service-myphpadmin
+    restart: always
+    ports:
+      - "8001:80"
+    environment:
+      PMA_HOST: order-mysql
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: root
+    depends_on:
+      - order-mysql
+    networks:
+      - shared-network
+
+
+
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    hostname: zookeeper
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - shared-network
+
+  broker:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: broker
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - shared-network
+
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.5.0
+    hostname: schema-registry
+    container_name: schema-registry
+    depends_on:
+      - broker
+    ports:
+      - "8085:8081"
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'broker:29092'
+      SCHEMA_REGISTRY_LISTENERS: http://schema-registry:8081
+    networks:
+      - shared-network
+
+  kafka-ui:
+    container_name: kafka-ui
+    image: provectuslabs/kafka-ui:latest
+    ports:
+      - "8086:8080"
+    depends_on:
+      - broker
+      - schema-registry
+    environment:
+      KAFKA_CLUSTERS_NAME: local
+      KAFKA_CLUSTERS_BOOTSTRAPSERVERS: broker:29092
+      KAFKA_CLUSTERS_SCHEMAREGISTRY: http://schema-registry:8081
+      DYNAMIC_CONFIG_ENABLED: 'true'
+    networks:
+      - shared-network
+  
+
+  
+
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    container_name: gateway
+    restart: always
+    environment:
+      - GATEWAY_PORT=9000
+      - PRODUCT_SERVICE_HOST=product-service
+      - PRODUCT_SERVICE_PORT=8080
+      - ORDER_SERVICE_HOST=order-service
+      - ORDER_SERVICE_PORT=8081
+      - INVENTORY_SERVICE_HOST=inventory-service
+      - INVENTORY_SERVICE_PORT=8082
+      - KEYCLOAK_ISSUER_URI=http://keycloak:8080/realms/devops-micro
+      - KEYCLOAK_JWK_SET_URI=http://keycloak:8080/realms/devops-micro/protocol/openid-connect/certs
+      - LOKI_HOST=loki
+      - LOKI_PORT=3100
+    ports:
+      - "9000:9000"
+    depends_on:
+      - keycloak
+      - product-service
+      - order-service
+      - inventory-service
+    networks:
+      - shared-network
+
+  keycloak-db:
+    image: mariadb:10.11
+    container_name: keycloak-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: keycloak
+      MYSQL_USER: keycloak
+      MYSQL_PASSWORD: password
+    volumes:
+      - keycloak_db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - shared-network
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.1
+    container_name: keycloak
+    command: ["start-dev", "--import-realm"]
+    restart: always
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+    environment:
+      KC_DB: mariadb
+      KC_DB_URL: jdbc:mariadb://keycloak-db:3306/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: password
+
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    ports:
+      - "8181:8080"
+    volumes:
+      - ./docker/keycloak/realms:/opt/keycloak/data/import
+    networks:
+      - shared-network
+
+
+
+  frontend:
+    build:
+      context: ./microservices-shop-frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    ports:
+      - "4200:80"
+    networks:
+      - shared-network
+
+volumes:
+  keycloak_db_data:
+
+networks:
+  shared-network:
+    driver: bridge

@@ -1,6 +1,7 @@
 package com.project.order.service;
 
 import com.project.order.service.stubs.InventoryClientStub;
+import com.project.order.service.stubs.ProductClientStub;
 import io.restassured.RestAssured;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,13 +36,19 @@ class OrderServiceApplicationTests {
 
         String submitOrderRequestJSON = """
                 {
-                    "skuCode": "iphone_15",
-                    "price": 1000,
-                    "quantity": 50
+                    "productId": "PROD-001",
+                    "productName": "iPhone 15",
+                    "quantity": 50,
+                    "userDetails": {
+                        "email": "user@example.com",
+                        "firstName": "John",
+                        "lastName": "Doe"
+                    }
                 }
                 """;
 
-        InventoryClientStub.stubInventoryCall("iphone_15", 50);
+        InventoryClientStub.stubInventoryCall("PROD-001", 50);
+        ProductClientStub.stubProductPriceCall("PROD-001", 999.99);
 
         String responseBody = RestAssured.given()
                 .contentType("application/json")
