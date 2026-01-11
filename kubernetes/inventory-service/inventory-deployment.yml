@@ -22,10 +22,10 @@ spec:
         - name: inventory-container
           image: aymanaomarihub/inventory-service:v1.0.1
           ports:
-            - containerPort: 8081
+            - containerPort: 8082
           env:
             - name: SERVER_PORT
-              value: "8081"
+              value: "8082"
             - name: DB_HOST
               value: mysql-inventory-service
             - name: DB_PORT

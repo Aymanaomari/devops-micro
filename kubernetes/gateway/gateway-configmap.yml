@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gateway-config
+  namespace: default
+data:
+  GATEWAY_PORT: "9000"
+  PRODUCT_SERVICE_HOST: "product-service"
+  PRODUCT_SERVICE_PORT: "8080"
+  ORDER_SERVICE_HOST: "order-service"
+  ORDER_SERVICE_PORT: "8081"
+  INVENTORY_SERVICE_HOST: "inventory-service"
+  INVENTORY_SERVICE_PORT: "8082"
+  KEYCLOAK_ISSUER_URI: "http://keycloak-internal:8080/realms/devops-micro"
+  KEYCLOAK_JWK_SET_URI: "http://keycloak-internal:8080/realms/devops-micro/protocol/openid-connect/certs"
+  LOKI_HOST: "loki"
+  LOKI_PORT: "3100"
