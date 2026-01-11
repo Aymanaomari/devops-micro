@@ -2,30 +2,20 @@ pipeline {
     agent any
 
     environment {
-        GITHUB_REPO = 'https://github.com/Aymanaomari/devops-micro.git'
         DOCKER_REGISTRY = 'aymanaomarihub'
         IMAGE_NAME = 'product-service'
         IMAGE_TAG = 'v1.0.3'
         DOCKER_CREDENTIALS = 'dockerhub-credentials'
-        KUBECONFIG = credentials('kubeconfig-credentials')
+        SERVICE_DIR = 'product.service'
     }
 
     stages {
-        stage('Clone Repository') {
-            steps {
-                script {
-                    echo '========== Cloning GitHub Repository =========='
-                    git branch: 'main', url: "${GITHUB_REPO}"
-                }
-            }
-        }
-
         stage('Test Code') {
             steps {
                 script {
-                    echo '========== Running Maven Tests =========='
-                    dir('product.service') {
-                        sh 'mvn clean test'
+                    echo '========== Running Maven Tests for Product Service =========='
+                    dir("${SERVICE_DIR}") {
+                        sh './mvnw clean test'
                     }
                 }
             }
@@ -34,9 +24,9 @@ pipeline {
         stage('Build Application') {
             steps {
                 script {
-                    echo '========== Building Application with Maven =========='
-                    dir('product.service') {
-                        sh 'mvn clean package -DskipTests'
+                    echo '========== Building Product Service with Maven =========='
+                    dir("${SERVICE_DIR}") {
+                        sh './mvnw clean package -DskipTests'
                     }
                 }
             }
@@ -46,7 +36,7 @@ pipeline {
             steps {
                 script {
                     echo '========== Building Docker Image =========='
-                    dir('product.service') {
+                    dir("${SERVICE_DIR}") {
                         sh """
                             docker build -t ${DOCKER_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} .
                             docker tag ${DOCKER_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} ${DOCKER_REGISTRY}/${IMAGE_NAME}:latest
@@ -76,10 +66,14 @@ pipeline {
             steps {
                 script {
                     echo '========== Deploying to Kubernetes =========='
-                    sh """
-                        kubectl rollout restart deployment/product-service-deployment -n default
-                        kubectl rollout status deployment/product-service-deployment -n default
-                    """
+                    withCredentials([file(credentialsId: 'kubeconfig-credentials', variable: 'KUBECONFIG')]) {
+                        sh """
+                            kubectl set image deployment/product-service-deployment \
+                                product-service=${DOCKER_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} \
+                                --record -n default
+                            kubectl rollout status deployment/product-service-deployment -n default --timeout=5m
+                        """
+                    }
                 }
             }
         }
@@ -88,10 +82,16 @@ pipeline {
             steps {
                 script {
                     echo '========== Verifying Deployment =========='
-                    sh """
-                        kubectl get pods -n default -l app=product-service-deployment
-                        kubectl get svc product-service -n default
-                    """
+                    withCredentials([file(credentialsId: 'kubeconfig-credentials', variable: 'KUBECONFIG')]) {
+                        sh """
+                            echo "Deployment Status:"
+                            kubectl get deployment product-service-deployment -n default -o wide
+                            echo "\nPods Status:"
+                            kubectl get pods -n default -l app=product-service-deployment
+                            echo "\nServices:"
+                            kubectl get svc product-service -n default
+                        """
+                    }
                 }
             }
         }
@@ -107,7 +107,9 @@ pipeline {
             echo 'Check the logs above for details'
         }
         always {
-            cleanWs()
+            script {
+                echo '========== Cleaning up workspace =========='
+            }
         }
     }
 }
