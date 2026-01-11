@@ -1,0 +1,124 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_REGISTRY = 'aymanaomarihub'
+        IMAGE_NAME = 'order-service'
+        IMAGE_TAG = 'v1.0.3'
+        DOCKER_CREDENTIALS = credentials('dockerhub-credentials')
+        KUBECONFIG_CREDENTIALS = credentials('kubeconfig-credentials')
+        GITHUB_REPO = 'https://github.com/Aymanaomari/devops-micro.git'
+        GITHUB_BRANCH = 'main'
+    }
+
+    stages {
+        stage('Clone Repository') {
+            steps {
+                script {
+                    echo "Cloning repository from ${GITHUB_REPO}"
+                    sh '''
+                        rm -rf devops-micro
+                        git clone -b ${GITHUB_BRANCH} ${GITHUB_REPO}
+                        cd devops-micro/order.service
+                    '''
+                }
+            }
+        }
+
+        stage('Test Code') {
+            steps {
+                script {
+                    echo "Running unit tests for order service"
+                    sh '''
+                        cd devops-micro/order.service
+                        ./mvnw clean test -DskipTests=false
+                    '''
+                }
+            }
+        }
+
+        stage('Build Application') {
+            steps {
+                script {
+                    echo "Building order service application"
+                    sh '''
+                        cd devops-micro/order.service
+                        ./mvnw clean package -DskipTests
+                    '''
+                }
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    echo "Building Docker image: ${DOCKER_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
+                    sh '''
+                        cd devops-micro/order.service
+                        docker build -t ${DOCKER_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} .
+                        docker tag ${DOCKER_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} ${DOCKER_REGISTRY}/${IMAGE_NAME}:latest
+                    '''
+                }
+            }
+        }
+
+        stage('Push to Docker Hub') {
+            steps {
+                script {
+                    echo "Pushing image to Docker Hub"
+                    sh '''
+                        echo $DOCKER_CREDENTIALS_PSW | docker login -u $DOCKER_CREDENTIALS_USR --password-stdin
+                        docker push ${DOCKER_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}
+                        docker push ${DOCKER_REGISTRY}/${IMAGE_NAME}:latest
+                        docker logout
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                script {
+                    echo "Deploying to Kubernetes cluster"
+                    sh '''
+                        export KUBECONFIG=${KUBECONFIG_CREDENTIALS}
+                        kubectl set image deployment/order-service-deployment \
+                            order-service=${DOCKER_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} \
+                            --record
+                        kubectl rollout status deployment/order-service-deployment --timeout=5m
+                    '''
+                }
+            }
+        }
+
+        stage('Verify Deployment') {
+            steps {
+                script {
+                    echo "Verifying deployment status"
+                    sh '''
+                        export KUBECONFIG=${KUBECONFIG_CREDENTIALS}
+                        echo "Deployment Status:"
+                        kubectl get deployment order-service-deployment -o wide
+                        echo "\nPods Status:"
+                        kubectl get pods -l app=order-service-deployment
+                        echo "\nServices:"
+                        kubectl get svc -l app=order-service-deployment
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Order Service Pipeline completed successfully!"
+            echo "Image: ${DOCKER_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
+        }
+        failure {
+            echo "Order Service Pipeline failed!"
+        }
+        always {
+            cleanWs()
+        }
+    }
+}

@@ -1,0 +1,113 @@
+pipeline {
+    agent any
+
+    environment {
+        GITHUB_REPO = 'https://github.com/Aymanaomari/devops-micro.git'
+        DOCKER_REGISTRY = 'aymanaomarihub'
+        IMAGE_NAME = 'product-service'
+        IMAGE_TAG = 'v1.0.3'
+        DOCKER_CREDENTIALS = 'dockerhub-credentials'
+        KUBECONFIG = credentials('kubeconfig-credentials')
+    }
+
+    stages {
+        stage('Clone Repository') {
+            steps {
+                script {
+                    echo '========== Cloning GitHub Repository =========='
+                    git branch: 'main', url: "${GITHUB_REPO}"
+                }
+            }
+        }
+
+        stage('Test Code') {
+            steps {
+                script {
+                    echo '========== Running Maven Tests =========='
+                    dir('product.service') {
+                        sh 'mvn clean test'
+                    }
+                }
+            }
+        }
+
+        stage('Build Application') {
+            steps {
+                script {
+                    echo '========== Building Application with Maven =========='
+                    dir('product.service') {
+                        sh 'mvn clean package -DskipTests'
+                    }
+                }
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    echo '========== Building Docker Image =========='
+                    dir('product.service') {
+                        sh """
+                            docker build -t ${DOCKER_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} .
+                            docker tag ${DOCKER_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} ${DOCKER_REGISTRY}/${IMAGE_NAME}:latest
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Push to Docker Hub') {
+            steps {
+                script {
+                    echo '========== Pushing Docker Image to Docker Hub =========='
+                    withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDENTIALS}", usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                        sh """
+                            echo "${DOCKER_PASS}" | docker login -u "${DOCKER_USER}" --password-stdin
+                            docker push ${DOCKER_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}
+                            docker push ${DOCKER_REGISTRY}/${IMAGE_NAME}:latest
+                            docker logout
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                script {
+                    echo '========== Deploying to Kubernetes =========='
+                    sh """
+                        kubectl rollout restart deployment/product-service-deployment -n default
+                        kubectl rollout status deployment/product-service-deployment -n default
+                    """
+                }
+            }
+        }
+
+        stage('Verify Deployment') {
+            steps {
+                script {
+                    echo '========== Verifying Deployment =========='
+                    sh """
+                        kubectl get pods -n default -l app=product-service-deployment
+                        kubectl get svc product-service -n default
+                    """
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo '========== Pipeline Completed Successfully =========='
+            echo "Image ${DOCKER_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} deployed successfully"
+        }
+        failure {
+            echo '========== Pipeline Failed =========='
+            echo 'Check the logs above for details'
+        }
+        always {
+            cleanWs()
+        }
+    }
+}
