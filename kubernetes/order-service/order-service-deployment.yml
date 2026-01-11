@@ -1,47 +1,57 @@
 kind: Deployment
 apiVersion: apps/v1
 metadata:
-  name: inventory-deployment
+  name: order-service-deployment
   labels:
-    app: inventory-app
+    app: order-service-deployment
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: inventory-app
+      app: order-service-deployment
   template:
     metadata:
       labels:
-        app: inventory-app
+        app: order-service-deployment
     spec:
       initContainers:
         - name: wait-for-mysql
           image: busybox:1.35
-          command: ['sh', '-c', 'until nc -z mysql-inventory-service 3306; do echo waiting for mysql; sleep 2; done']
+          command: ['sh', '-c', 'until nc -z order-mysql-service 3306; do echo waiting for mysql; sleep 2; done']
       containers:
-        - name: inventory-container
-          image: aymanaomarihub/inventory-service:v1.0.1
+        - name: order-service
+          image: aymanaomarihub/order-service:v1.0.2
           ports:
             - containerPort: 8081
           env:
             - name: SERVER_PORT
               value: "8081"
             - name: DB_HOST
-              value: mysql-inventory-service
+              value: order-mysql-service
             - name: DB_PORT
               value: "3306"
-            - name: DB_NAME
-              value: inventory-service
             - name: DB_USERNAME
               valueFrom:
                 secretKeyRef:
-                  name: inventory-service-secret
+                  name: order-service-secret
                   key: DB_USERNAME
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: inventory-service-secret
+                  name: order-service-secret
                   key: DB_PASSWORD
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: broker:29092
+            - name: KAFKA_DEFAULT_TOPIC
+              value: order-placed
+            - name: INVENTORY_HOST
+              value: inventory-service
+            - name: INVENTORY_PORT
+              value: "8082"
+            - name: PRODUCT_HOST
+              value: product-service
+            - name: PRODUCT_PORT
+              value: "8080"
             - name: LOKI_HOST
               value: loki
             - name: LOKI_PORT
@@ -53,6 +63,3 @@ spec:
             limits:
               memory: "512Mi"
               cpu: "1"
-            
-
-            

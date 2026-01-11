@@ -6,7 +6,7 @@ metadata:
     app: product-service
 spec:
   selector:
-    app: product-service
+    app: product-service-deployment
   ports:
     - name: http
       protocol: TCP

@@ -1,21 +1,21 @@
 kind: Deployment
 apiVersion: apps/v1
 metadata:
-  name: inventory-mysql
+  name: order-mysql
   labels:
-    app: inventory-mysql
+    app: order-mysql
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: inventory-mysql
+      app: order-mysql
   template:
     metadata:
       labels:
-        app: inventory-mysql
+        app: order-mysql
     spec:
       containers:
-        - name: inventory-mysql
+        - name: order-mysql
           image: mysql:8.3.0
           ports:
             - containerPort: 3306
@@ -23,10 +23,13 @@ spec:
             - name: MYSQL_ROOT_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: inventory-service-secret
+                  name: order-service-secret
                   key: DB_PASSWORD
             - name: MYSQL_DATABASE
-              value: "inventory-service"
+              value: "order-service"
+          volumeMounts:
+            - name: mysql-data
+              mountPath: /var/lib/mysql
           resources:
             requests:
               cpu: "100m"
@@ -34,4 +37,7 @@ spec:
             limits:
               cpu: "500m"
               memory: "512Mi"
-            
+      volumes:
+        - name: mysql-data
+          persistentVolumeClaim:
+            claimName: order-mysql-pvc

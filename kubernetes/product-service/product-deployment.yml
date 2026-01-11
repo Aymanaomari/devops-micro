@@ -2,22 +2,26 @@
 kind: Deployment
 apiVersion: apps/v1
 metadata:
-  name: product-service
+  name: product-service-deployment
   labels:
-    app: product-service
+    app: product-service-deployment
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: product-service
+      app: product-service-deployment
   template:
     metadata:
       labels:
-        app: product-service
+        app: product-service-deployment
     spec:
+      initContainers:
+        - name: wait-for-mongo
+          image: busybox:1.35
+          command: ['sh', '-c', 'until nc -z product-mongo-service 27017; do echo waiting for mongodb; sleep 2; done']
       containers:
         - name: product-service
-          image: aymanaomarihub/product-service:v1.0.0
+          image: aymanaomarihub/product-service:v1.0.1
           ports:
             - containerPort: 8080
           env:
@@ -39,6 +43,10 @@ spec:
                 secretKeyRef:
                   name: product-service-secret
                   key: DB_PASSWORD
+            - name: LOKI_HOST
+              value: loki
+            - name: LOKI_PORT
+              value: "3100"
           resources:
             requests:
               memory: "256Mi"

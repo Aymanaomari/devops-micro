@@ -1,0 +1,46 @@
+Observability:
+1-loki pvc
+2-loki deployment 
+3-loki service
+4-prometheus configMap
+5-prometheus pvc
+6-prometheus deployment
+8-prometheus service
+9-grafana configMap
+10-grafana secret
+11-grafana pvc
+12-grafana deployment
+13-grafana service
+
+
+//Services//
+product-service:
+1-product-secret
+2-product mongo pvc
+3-product mongo deployment
+4-prodct mongo service
+5-product deployment
+6-product service
+
+inventory-service:
+1-inventory secret
+2-inventory pvc
+3-inventory mysql deployment
+4-inventory mysql service
+5-inventory deployment 
+6-inventory service
+
+order-service:
+1-order-service-secret
+2-mysql-pvc
+3-mysql-deployment
+4-mysql-service
+5-order-service-deployment
+6-order-service.yml 
+
+
+
+
+
+
+

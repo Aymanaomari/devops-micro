@@ -32,8 +32,15 @@ spec:
                   key: DB_PASSWORD
             - name: MONGO_INITDB_DATABASE
               value: "product-service" 
+          volumeMounts:
+            - name: mongo-data
+              mountPath: /data/db
           resources:
             requests:
               cpu: "100m"
             limits:
               cpu: "500m"
+      volumes:
+        - name: mongo-data
+          persistentVolumeClaim:
+            claimName: product-mongo-pvc
