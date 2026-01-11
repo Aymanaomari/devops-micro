@@ -1,5 +1,7 @@
+# /home/ayman-aomari/Desktop/devops-micro/.gitignore
 data/
 mysql/
 mvnw.cmd
 docker/
 volume-data/
+**/node_modules/
