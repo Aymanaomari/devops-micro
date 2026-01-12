@@ -10,17 +10,7 @@ pipeline {
     }
 
     stages {
-        stage('Build') {
-            steps {
-                script {
-                    echo '========== Building Product Service =========='
-                    dir("${SERVICE_DIR}") {
-                        sh './mvnw clean package -DskipTests'
-                    }
-                }
-            }
-        }
-
+        
         stage('Build Docker Image') {
             steps {
                 script {
