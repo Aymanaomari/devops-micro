@@ -3,21 +3,19 @@ pipeline {
 
     environment {
         DOCKER_REGISTRY = 'aymanaomarihub'
-        IMAGE_NAME = 'product-service'
+        IMAGE_NAME = 'inventory-service'
         IMAGE_TAG = 'v1.0.3'
-        DOCKER_CREDENTIALS = 'dockerhub-creds'
-        SERVICE_DIR = 'product.service'
+        DOCKER_CREDENTIALS = 'dockerhub-credentials'
+        SERVICE_DIR = 'inventory.service'
     }
 
     stages {
         stage('Test Code') {
             steps {
                 script {
-                    echo '========== Running Maven Tests for Product Service =========='
+                    echo '========== Running Maven Tests for Inventory Service =========='
                     dir("${SERVICE_DIR}") {
-                        sh """
-                            docker run --rm -v \$(pwd):/workspace -w /workspace maven:3.9.6-jdk-17 ./mvnw clean test
-                        """
+                        sh './mvnw clean test'
                     }
                 }
             }
@@ -26,11 +24,9 @@ pipeline {
         stage('Build Application') {
             steps {
                 script {
-                    echo '========== Building Product Service with Maven =========='
+                    echo '========== Building Inventory Service with Maven =========='
                     dir("${SERVICE_DIR}") {
-                        sh """
-                            docker run --rm -v \$(pwd):/workspace -w /workspace maven:3.9.6-jdk-17 ./mvnw clean package -DskipTests
-                        """
+                        sh './mvnw clean package -DskipTests'
                     }
                 }
             }
@@ -70,12 +66,14 @@ pipeline {
             steps {
                 script {
                     echo '========== Deploying to Kubernetes =========='
-                    sh """
-                        kubectl set image deployment/product-service-deployment \
-                            product-service=${DOCKER_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} \
-                            --record -n default
-                        kubectl rollout status deployment/product-service-deployment -n default --timeout=5m
-                    """
+                    withCredentials([file(credentialsId: 'kubeconfig-credentials', variable: 'KUBECONFIG')]) {
+                        sh """
+                            kubectl set image deployment/inventory-service-deployment \
+                                inventory-service=${DOCKER_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} \
+                                --record -n default
+                            kubectl rollout status deployment/inventory-service-deployment -n default --timeout=5m
+                        """
+                    }
                 }
             }
         }
@@ -84,14 +82,16 @@ pipeline {
             steps {
                 script {
                     echo '========== Verifying Deployment =========='
-                    sh """
-                        echo "Deployment Status:"
-                        kubectl get deployment product-service-deployment -n default -o wide
-                        echo "\nPods Status:"
-                        kubectl get pods -n default -l app=product-service-deployment
-                        echo "\nServices:"
-                        kubectl get svc product-service -n default
-                    """
+                    withCredentials([file(credentialsId: 'kubeconfig-credentials', variable: 'KUBECONFIG')]) {
+                        sh """
+                            echo "Deployment Status:"
+                            kubectl get deployment inventory-service-deployment -n default -o wide
+                            echo "\nPods Status:"
+                            kubectl get pods -n default -l app=inventory-service-deployment
+                            echo "\nServices:"
+                            kubectl get svc inventory-service -n default
+                        """
+                    }
                 }
             }
         }

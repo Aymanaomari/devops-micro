@@ -40,10 +40,6 @@ spec:
                 secretKeyRef:
                   name: order-service-secret
                   key: DB_PASSWORD
-            - name: KAFKA_BOOTSTRAP_SERVERS
-              value: broker:29092
-            - name: KAFKA_DEFAULT_TOPIC
-              value: order-placed
             - name: INVENTORY_HOST
               value: inventory-service
             - name: INVENTORY_PORT
