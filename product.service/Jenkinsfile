@@ -4,7 +4,7 @@ pipeline {
     environment {
         DOCKER_REGISTRY = 'aymanaomarihub'
         IMAGE_NAME = 'product-service'
-        IMAGE_TAG = 'v1.0.4'
+        IMAGE_TAG = 'v1.0.5'
         DOCKER_CREDENTIALS = 'dockerhub-creds'
         SERVICE_DIR = 'product.service'
     }
