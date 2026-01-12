@@ -35,7 +35,7 @@ public class ProductController {
     public Map<String, String> testEndpoint() {
         return Map.of(
                 "status", "success",
-                "message", "Product service is running!",
+                "message", "Product service is running good after update!",
                 "timestamp", java.time.LocalDateTime.now().toString(),
                 "service", "product-service");
     }
