@@ -16,7 +16,7 @@ pipeline {
                     echo '========== Running Maven Tests for Product Service =========='
                     dir("${SERVICE_DIR}") {
                         sh """
-                            docker run --rm -v \$(pwd):/workspace -w /workspace maven:3.9.6-jdk-17 ./mvnw clean test
+                            docker run --rm -v \$(pwd):/workspace -w /workspace maven:3.9-jdk-17-slim ./mvnw clean test
                         """
                     }
                 }
@@ -29,7 +29,7 @@ pipeline {
                     echo '========== Building Product Service with Maven =========='
                     dir("${SERVICE_DIR}") {
                         sh """
-                            docker run --rm -v \$(pwd):/workspace -w /workspace maven:3.9.6-jdk-17 ./mvnw clean package -DskipTests
+                            docker run --rm -v \$(pwd):/workspace -w /workspace maven:3.9-jdk-17-slim ./mvnw clean package -DskipTests
                         """
                     }
                 }
