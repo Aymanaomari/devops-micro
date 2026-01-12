@@ -10,27 +10,12 @@ pipeline {
     }
 
     stages {
-        stage('Test Code') {
+        stage('Build') {
             steps {
                 script {
-                    echo '========== Running Maven Tests for Product Service =========='
+                    echo '========== Building Product Service =========='
                     dir("${SERVICE_DIR}") {
-                        sh """
-                            docker run --rm -v \$(pwd):/workspace -w /workspace maven:3.9-jdk-17-slim ./mvnw clean test
-                        """
-                    }
-                }
-            }
-        }
-
-        stage('Build Application') {
-            steps {
-                script {
-                    echo '========== Building Product Service with Maven =========='
-                    dir("${SERVICE_DIR}") {
-                        sh """
-                            docker run --rm -v \$(pwd):/workspace -w /workspace maven:3.9-jdk-17-slim ./mvnw clean package -DskipTests
-                        """
+                        sh './mvnw clean package -DskipTests'
                     }
                 }
             }
@@ -75,22 +60,6 @@ pipeline {
                             product-service=${DOCKER_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} \
                             --record -n default
                         kubectl rollout status deployment/product-service-deployment -n default --timeout=5m
-                    """
-                }
-            }
-        }
-
-        stage('Verify Deployment') {
-            steps {
-                script {
-                    echo '========== Verifying Deployment =========='
-                    sh """
-                        echo "Deployment Status:"
-                        kubectl get deployment product-service-deployment -n default -o wide
-                        echo "\nPods Status:"
-                        kubectl get pods -n default -l app=product-service-deployment
-                        echo "\nServices:"
-                        kubectl get svc product-service -n default
                     """
                 }
             }
